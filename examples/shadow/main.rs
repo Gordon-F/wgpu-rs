@@ -839,6 +839,35 @@ impl framework::Example for Example {
     }
 }
 
+#[cfg(target_os = "android")]
+#[cfg_attr(target_os = "android", ndk_glue::main(backtrace = "full"))]
+fn main() {
+    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Trace));
+
+    {
+        log::info!("Waiting for NativeScreen");
+        loop {
+            match ndk_glue::native_window().as_ref() {
+                Some(_) => {
+                    log::info!("NativeScreen Found:{:?}", ndk_glue::native_window());
+
+                    let internal_data_path = ndk_glue::native_activity().internal_data_path();
+                    log::info!("Internal Data Path Found: {:?}", internal_data_path);
+                    //std::env::set_var("WGPU_CHROME_TRACE", &internal_data_path.to_string_lossy().into_owned());
+                    std::env::set_var("WGPU_TRACE", &internal_data_path.to_string_lossy().into_owned());
+
+                    break;
+                }
+                None => (),
+            }
+        }
+    }
+
+    framework::run::<Example>("shadow");
+}
+
+
+#[cfg(not(target_os = "android"))]
 fn main() {
     framework::run::<Example>("shadow");
 }

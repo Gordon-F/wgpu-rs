@@ -72,7 +72,8 @@ struct Setup {
 }
 
 async fn setup<E: Example>(title: &str) -> Setup {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_os = "android"), not(target_arch = "wasm32")))]
+    //#[cfg(not(target_arch = "wasm32"))]
     {
         let chrome_tracing_dir = std::env::var("WGPU_CHROME_TRACE");
         subscriber::initialize_default_subscriber(
@@ -108,6 +109,7 @@ async fn setup<E: Example>(title: &str) -> Setup {
 
     log::info!("Initializing the surface...");
 
+    /*
     let backend = if let Ok(backend) = std::env::var("WGPU_BACKEND") {
         match backend.to_lowercase().as_str() {
             "vulkan" => wgpu::BackendBit::VULKAN,
@@ -120,6 +122,12 @@ async fn setup<E: Example>(title: &str) -> Setup {
         }
     } else {
         wgpu::BackendBit::PRIMARY
+    };
+    */
+    let backend = if cfg!(target_os = "android") {
+        wgpu::BackendBit::GL
+    } else {
+        wgpu::BackendBit::METAL
     };
     let power_preference = if let Ok(power_preference) = std::env::var("WGPU_POWER_PREF") {
         match power_preference.to_lowercase().as_str() {
@@ -227,6 +235,8 @@ fn start<E: Example>(
         // TODO: Allow srgb unconditionally
         format: if cfg!(target_arch = "wasm32") {
             wgpu::TextureFormat::Bgra8Unorm
+        } else if cfg!(target_os = "android") {
+            wgpu::TextureFormat::Rgba8UnormSrgb
         } else {
             wgpu::TextureFormat::Bgra8UnormSrgb
         },
@@ -269,7 +279,9 @@ fn start<E: Example>(
                     pool.run_until_stalled();
                 }
 
-                #[cfg(target_arch = "wasm32")]
+                #[cfg(target_os = "android")]
+                request_redraw();
+
                 window.request_redraw();
             }
             event::Event::WindowEvent {
@@ -336,3 +348,22 @@ pub fn run<E: Example>(title: &str) {
 // thus avoiding listing the example names in `Cargo.toml`.
 #[allow(dead_code)]
 fn main() {}
+
+
+#[cfg(target_os = "android")]
+pub fn request_redraw() {
+    match ndk_glue::native_window().as_ref() {
+        Some(native_window) => {
+            let a_native_window: *mut ndk_sys::ANativeWindow = native_window.ptr().as_ptr();
+            let a_native_activity: *mut ndk_sys::ANativeActivity =
+                ndk_glue::native_activity().ptr().as_ptr();
+            unsafe {
+                match (*(*a_native_activity).callbacks).onNativeWindowRedrawNeeded {
+                    Some(callback) => callback(a_native_activity, a_native_window),
+                    None => (),
+                };
+            };
+        }
+        None => (),
+    }
+}

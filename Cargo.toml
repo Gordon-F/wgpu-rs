@@ -71,6 +71,22 @@ name="hello-compute"
 path="examples/hello-compute/main.rs"
 test = true
 
+[[example]]
+name="water"
+path="examples/water/main.rs"
+crate-type = ["cdylib"]
+
+[[example]]
+name="cube"
+path="examples/cube/main.rs"
+crate-type = ["cdylib"]
+
+[[example]]
+name="shadow"
+path="examples/shadow/main.rs"
+crate-type = ["cdylib"]
+
+
 [patch."https://github.com/gfx-rs/wgpu"]
 #wgpu-types = { version = "0.6", path = "../wgpu/wgpu-types" }
 #wgpu-core = { version = "0.6", path = "../wgpu/wgpu-core" }
@@ -88,13 +104,13 @@ test = true
 #gpu-alloc = { path = "../gpu-alloc/gpu-alloc" }
 
 [patch."https://github.com/gfx-rs/gfx"]
-#gfx-hal = { path = "../gfx/src/hal" }
-#gfx-backend-empty = { path = "../gfx/src/backend/empty" }
-#gfx-backend-vulkan = { path = "../gfx/src/backend/vulkan" }
-#gfx-backend-gl = { path = "../gfx/src/backend/gl" }
+gfx-hal = { path = "../gfx/src/hal" }
+gfx-backend-empty = { path = "../gfx/src/backend/empty" }
+gfx-backend-vulkan = { path = "../gfx/src/backend/vulkan" }
+gfx-backend-gl = { path = "../gfx/src/backend/gl" }
 #gfx-backend-dx12 = { path = "../gfx/src/backend/dx12" }
 #gfx-backend-dx11 = { path = "../gfx/src/backend/dx11" }
-#gfx-backend-metal = { path = "../gfx/src/backend/metal" }
+gfx-backend-metal = { path = "../gfx/src/backend/metal" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "=0.2.69" # remember to change version in readme as well
@@ -197,3 +213,22 @@ wasm-bindgen-futures = "0.4.19"
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 console_error_panic_hook = "0.1.6"
 console_log = "0.1.2"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.9"
+ndk-glue = "0.2"
+ndk-sys = "0.2"
+
+[patch."https://github.com/timothee-haudebourg/khronos-egl"]
+egl = { package = "khronos-egl", path = "../khronos-egl", features = ["dynamic"] }
+
+[package.metadata.android]
+target_sdk_version = 24
+min_sdk_version = 24
+fullscreen = true
+opengles_version = [3, 0]
+orientation = "sensorLandscape"
+
+[[package.metadata.android.permission]]
+name = "android.permission.WRITE_EXTERNAL_STORAGE"
+max_sdk_version = 18

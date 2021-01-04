@@ -7,7 +7,7 @@ use winit::{
 
 async fn run(event_loop: EventLoop<()>, window: Window, swapchain_format: wgpu::TextureFormat) {
     let size = window.inner_size();
-    let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
+    let instance = wgpu::Instance::new(wgpu::BackendBit::GL);
     let surface = unsafe { instance.create_surface(&window) };
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptions {
@@ -131,11 +131,29 @@ async fn run(event_loop: EventLoop<()>, window: Window, swapchain_format: wgpu::
     });
 }
 
+#[cfg(target_os = "android")]
+#[cfg_attr(target_os = "android", ndk_glue::main(backtrace = "full"))]
 fn main() {
+    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Trace));
+
+    {
+        log::info!("Waiting for NativeScreen");
+        loop {
+            match ndk_glue::native_window().as_ref() {
+                Some(_) => {
+                    log::info!("NativeScreen Found:{:?}", ndk_glue::native_window());
+                    break;
+                }
+                None => (),
+            }
+        }
+    }
+
     let event_loop = EventLoop::new();
     let window = winit::window::Window::new(&event_loop).unwrap();
     #[cfg(not(target_arch = "wasm32"))]
     {
+        #[cfg(not(target_os = "android"))]
         subscriber::initialize_default_subscriber(None);
         // Temporarily avoid srgb formats for the swapchain on the web
         futures::executor::block_on(run(event_loop, window, wgpu::TextureFormat::Bgra8UnormSrgb));
